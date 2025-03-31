@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Fundo circular roxo -->
+  <circle cx="32" cy="32" r="30" fill="#8a2be2" />
+  
+  <!-- Letras PM2 estilizadas -->
+  <text x="32" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#ffffff">PM2</text>
+  
+  <!-- Ícones simples representando servidores/processos -->
+  <rect x="16" y="18" width="8" height="8" rx="1" fill="#ffffff" opacity="0.8" />
+  <rect x="28" y="18" width="8" height="8" rx="1" fill="#ffffff" opacity="0.8" />
+  <rect x="40" y="18" width="8" height="8" rx="1" fill="#ffffff" opacity="0.8" />
+</svg>
