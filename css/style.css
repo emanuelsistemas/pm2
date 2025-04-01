@@ -202,6 +202,27 @@ body {
   border-color: #9b59b6;
 }
 
+/* Estilos para status de erro */
+.error-text {
+  color: var(--color-danger);
+}
+
+.error-status {
+  color: var(--color-danger);
+  font-style: italic;
+}
+
+/* Estilos para status de simulação */
+.simulated-balance {
+  color: var(--color-warning);
+  font-style: italic;
+}
+
+.simulated-status {
+  color: var(--color-warning);
+  font-size: 0.8rem;
+}
+
 .stats-icon {
   font-size: 2.5rem;
   margin-right: 1rem;

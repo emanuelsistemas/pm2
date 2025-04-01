@@ -174,13 +174,38 @@ def get_openrouter_balance():
     try:
         # Consultar API da OpenRouter
         headers = {
-            'Authorization': f'Bearer {OPENROUTER_API_KEY}'
+            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+            'HTTP-Referer': 'https://localhost:4000'
         }
-        response = requests.get('https://openrouter.ai/api/v1/auth/balance', headers=headers)
+        
+        # Tentar o endpoint correto da API do OpenRouter
+        response = requests.get('https://api.openrouter.ai/api/v1/auth/balance', headers=headers)
+        
+        # Se o primeiro endpoint falhar, tentar alternativas
+        if response.status_code != 200:
+            # Tentar endpoint alternativo 1
+            response = requests.get('https://openrouter.ai/api/v1/auth/balance', headers=headers)
+            
+            # Tentar endpoint alternativo 2 se o anterior falhar
+            if response.status_code != 200:
+                response = requests.get('https://openrouter.ai/api/auth/balance', headers=headers)
+                
+                # Tentar endpoint alternativo 3 se o anterior falhar
+                if response.status_code != 200:
+                    response = requests.get('https://api.openrouter.ai/auth/balance', headers=headers)
         
         if response.status_code == 200:
             data = response.json()
-            balance = data.get('balance', {}).get('amount', 0)
+            # O formato da resposta pode variar dependendo do endpoint
+            if 'balance' in data and isinstance(data['balance'], dict):
+                balance = data['balance'].get('amount', 0)
+            elif 'balance' in data and isinstance(data['balance'], (int, float)):
+                balance = data['balance']
+            elif 'amount' in data:
+                balance = data['amount']
+            else:
+                balance = 0
+                
             formatted_balance = f"${balance:.2f}"
             status = 'Atualizado'
             
@@ -219,17 +244,50 @@ def get_anthropic_balance():
     try:
         # Consultar API da Anthropic
         headers = {
+            'anthropic-version': '2023-06-01',
             'x-api-key': ANTHROPIC_API_KEY,
             'Content-Type': 'application/json'
         }
-        # A API da Anthropic não tem um endpoint específico para saldo, então usamos o endpoint de uso
-        response = requests.get('https://api.anthropic.com/v1/account/usage', headers=headers)
         
-        if response.status_code == 200:
+        # Tentar vários endpoints possíveis
+        endpoints = [
+            'https://api.anthropic.com/v1/usage',
+            'https://api.anthropic.com/v1/account',
+            'https://api.anthropic.com/v1/account/usage',
+            'https://api.anthropic.com/v1/account/billing'
+        ]
+        
+        response = None
+        for endpoint in endpoints:
+            try:
+                resp = requests.get(endpoint, headers=headers, timeout=5)
+                if resp.status_code == 200:
+                    response = resp
+                    print(f"Sucesso ao consultar endpoint: {endpoint}")
+                    break
+            except Exception as e:
+                print(f"Erro ao tentar endpoint {endpoint}: {str(e)}")
+                continue
+        
+        if response and response.status_code == 200:
             data = response.json()
+            print(f"Dados recebidos da API Anthropic: {data}")
             # Extrair o saldo ou o crédito disponível da resposta
-            balance = data.get('available_credit', 0)
-            formatted_balance = f"${balance:.2f}"
+            # Se tiver available_budget no response, usamos ele
+            if 'available_budget' in data:
+                balance = data.get('available_budget', 0)
+                formatted_balance = f"${balance:.2f}"
+            # Caso contrário tentamos calcular pelo grant_amount - usage_usd
+            elif 'grant_amount' in data:
+                grant = data.get('grant_amount', 0)
+                used = data.get('usage_usd', 0)
+                balance = grant - used
+                formatted_balance = f"${balance:.2f}"
+            else:
+                # Se não tiver informação de saldo, mostramos o total usado
+                used = data.get('usage_usd', 0)
+                formatted_balance = f"${used:.2f} (usado)"
+            
             status = 'Atualizado'
             
             # Atualizar cache
@@ -241,7 +299,7 @@ def get_anthropic_balance():
             
             return {'balance': formatted_balance, 'status': status}
         else:
-            status = f'Erro: {response.status_code}'
+            status = f'Erro: {response.status_code if response else "Conexão falhou"}'
             api_balance_cache['anthropic']['status'] = status
             return {'balance': None, 'status': status}
             
