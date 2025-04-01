@@ -14,7 +14,10 @@ const CONFIG = {
     // Endpoints da API
     api: {
         processes: '/api/processes',
-        stats: '/api/stats'
+        stats: '/api/stats',
+        balances: '/api/balance',
+        openrouterBalance: '/api/balance/openrouter',
+        anthropicBalance: '/api/balance/anthropic'
     }
 };
 
@@ -28,14 +31,32 @@ const DOM = {
     stoppedProcesses: document.getElementById('stopped-processes'),
     lastUpdated: document.getElementById('last-updated'),
     
+    // Elementos de saldo
+    openrouterBalance: document.getElementById('openrouter-balance'),
+    openrouterStatus: document.getElementById('openrouter-status'),
+    anthropicBalance: document.getElementById('anthropic-balance'),
+    anthropicStatus: document.getElementById('anthropic-status'),
+    
     // Botões e controles
-    refreshBtn: document.getElementById('refresh-btn')
+    refreshBtn: document.getElementById('refresh-btn'),
+    refreshOpenrouterBtn: document.getElementById('refresh-openrouter'),
+    refreshAnthropicBtn: document.getElementById('refresh-anthropic')
 };
 
 // Estado da aplicação
 let state = {
     processes: [],
     stats: {},
+    balances: {
+        openrouter: {
+            balance: '--',
+            status: 'Aguardando...'
+        },
+        anthropic: {
+            balance: '--',
+            status: 'Aguardando...'
+        }
+    },
     lastUpdate: null,
     refreshTimer: null
 };
@@ -46,9 +67,12 @@ let state = {
 function init() {
     // Registrar event listeners
     DOM.refreshBtn.addEventListener('click', refreshData);
+    DOM.refreshOpenrouterBtn?.addEventListener('click', () => refreshBalance('openrouter'));
+    DOM.refreshAnthropicBtn?.addEventListener('click', () => refreshBalance('anthropic'));
     
     // Carregar dados iniciais
     refreshData();
+    refreshBalances();
     
     // Configurar atualizações automáticas
     startAutoRefresh();
@@ -66,7 +90,10 @@ function startAutoRefresh() {
     }
     
     // Configurar novo timer
-    state.refreshTimer = setInterval(refreshData, CONFIG.refreshInterval);
+    state.refreshTimer = setInterval(() => {
+        refreshData();
+        refreshBalances();
+    }, CONFIG.refreshInterval);
     console.log(`Atualização automática configurada: ${CONFIG.refreshInterval / 1000}s`);
 }
 
@@ -130,6 +157,143 @@ async function fetchStats() {
     }
     
     return response.json();
+}
+
+/**
+ * Atualiza os saldos das APIs
+ */
+async function refreshBalances() {
+    console.log('Atualizando saldos das APIs...');
+    
+    try {
+        // Buscar dados de saldo
+        const balances = await fetchBalances();
+        
+        // Atualizar estado
+        state.balances = balances;
+        
+        // Atualizar interface
+        updateBalanceUI();
+        
+        console.log('Saldos atualizados com sucesso');
+    } catch (error) {
+        console.error('Erro ao atualizar saldos:', error);
+        showBalanceError('openrouter', 'Falha ao carregar dados');
+        showBalanceError('anthropic', 'Falha ao carregar dados');
+    }
+}
+
+/**
+ * Atualiza o saldo de um provedor específico
+ */
+async function refreshBalance(provider) {
+    console.log(`Atualizando saldo de ${provider}...`);
+    
+    if (!DOM[`${provider}Balance`] || !DOM[`${provider}Status`]) {
+        console.error(`Elementos DOM para ${provider} não encontrados`);
+        return;
+    }
+    
+    // Mostrar loader
+    DOM[`${provider}Balance`].innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+    DOM[`${provider}Status`].textContent = 'Atualizando...';
+    
+    try {
+        // Buscar dados de saldo
+        const balance = await fetchBalance(provider);
+        
+        // Atualizar estado
+        state.balances[provider] = balance;
+        
+        // Atualizar interface
+        updateProviderBalanceUI(provider);
+        
+        console.log(`Saldo de ${provider} atualizado com sucesso`);
+    } catch (error) {
+        console.error(`Erro ao atualizar saldo de ${provider}:`, error);
+        showBalanceError(provider, 'Falha ao carregar dados');
+    }
+}
+
+/**
+ * Busca os saldos das APIs
+ */
+async function fetchBalances() {
+    const response = await fetch(CONFIG.api.balances);
+    
+    if (!response.ok) {
+        throw new Error(`Erro ao buscar saldos: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return {
+        openrouter: data.openrouter || state.balances.openrouter,
+        anthropic: data.anthropic || state.balances.anthropic
+    };
+}
+
+/**
+ * Busca o saldo de um provedor específico
+ */
+async function fetchBalance(provider) {
+    const endpoint = CONFIG.api[`${provider}Balance`];
+    if (!endpoint) {
+        throw new Error(`Endpoint não encontrado para ${provider}`);
+    }
+    
+    const response = await fetch(endpoint);
+    
+    if (!response.ok) {
+        throw new Error(`Erro ao buscar saldo de ${provider}: ${response.status}`);
+    }
+    
+    return response.json();
+}
+
+/**
+ * Atualiza a interface com os saldos
+ */
+function updateBalanceUI() {
+    updateProviderBalanceUI('openrouter');
+    updateProviderBalanceUI('anthropic');
+}
+
+/**
+ * Atualiza a interface com o saldo de um provedor específico
+ */
+function updateProviderBalanceUI(provider) {
+    const balanceInfo = state.balances[provider];
+    
+    if (!balanceInfo) return;
+    
+    const balanceElement = DOM[`${provider}Balance`];
+    const statusElement = DOM[`${provider}Status`];
+    
+    if (balanceElement && balanceInfo.balance) {
+        balanceElement.textContent = balanceInfo.balance;
+    } else if (balanceElement) {
+        balanceElement.textContent = '--';
+    }
+    
+    if (statusElement && balanceInfo.status) {
+        statusElement.textContent = balanceInfo.status;
+    }
+}
+
+/**
+ * Exibe um erro no card de saldo
+ */
+function showBalanceError(provider, message) {
+    const balanceElement = DOM[`${provider}Balance`];
+    const statusElement = DOM[`${provider}Status`];
+    
+    if (balanceElement) {
+        balanceElement.textContent = '--';
+    }
+    
+    if (statusElement) {
+        statusElement.textContent = message || 'Erro';
+    }
 }
 
 /**

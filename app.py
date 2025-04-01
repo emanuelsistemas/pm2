@@ -1,13 +1,39 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import subprocess
 import json
 import os
+import requests
 import time
+from dotenv import load_dotenv
 
-app = Flask(__name__, 
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Configurações das APIs
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+
+app = Flask(__name__,
             static_folder='.',
             static_url_path='',
             template_folder='templates')
+
+# Cache para armazenar os saldos
+api_balance_cache = {
+    'openrouter': {
+        'balance': None,
+        'timestamp': 0,
+        'status': 'Não configurado'
+    },
+    'anthropic': {
+        'balance': None,
+        'timestamp': 0,
+        'status': 'Não configurado'
+    }
+}
+
+# Tempo de expiração do cache em segundos (15 minutos)
+CACHE_EXPIRY = 15 * 60
 
 # Configurar pasta static para arquivos estáticos adicionais
 @app.route('/static/<path:filename>')
@@ -130,6 +156,123 @@ def api_stats():
     }
     
     return jsonify(stats)
+
+def get_openrouter_balance():
+    """Obtém o saldo da conta OpenRouter"""
+    # Verificar se a chave API está configurada
+    if not OPENROUTER_API_KEY:
+        return {'balance': None, 'status': 'API Key não configurada'}
+
+    # Verificar cache
+    cache = api_balance_cache['openrouter']
+    current_time = time.time()
+    
+    # Retornar do cache se não expirou
+    if cache['balance'] is not None and (current_time - cache['timestamp']) < CACHE_EXPIRY:
+        return {'balance': cache['balance'], 'status': cache['status']}
+    
+    try:
+        # Consultar API da OpenRouter
+        headers = {
+            'Authorization': f'Bearer {OPENROUTER_API_KEY}'
+        }
+        response = requests.get('https://openrouter.ai/api/v1/auth/balance', headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            balance = data.get('balance', {}).get('amount', 0)
+            formatted_balance = f"${balance:.2f}"
+            status = 'Atualizado'
+            
+            # Atualizar cache
+            api_balance_cache['openrouter'] = {
+                'balance': formatted_balance,
+                'timestamp': current_time,
+                'status': status
+            }
+            
+            return {'balance': formatted_balance, 'status': status}
+        else:
+            status = f'Erro: {response.status_code}'
+            api_balance_cache['openrouter']['status'] = status
+            return {'balance': None, 'status': status}
+            
+    except Exception as e:
+        status = f'Erro: {str(e)}'
+        api_balance_cache['openrouter']['status'] = status
+        return {'balance': None, 'status': status}
+
+def get_anthropic_balance():
+    """Obtém o saldo da conta Anthropic"""
+    # Verificar se a chave API está configurada
+    if not ANTHROPIC_API_KEY:
+        return {'balance': None, 'status': 'API Key não configurada'}
+
+    # Verificar cache
+    cache = api_balance_cache['anthropic']
+    current_time = time.time()
+    
+    # Retornar do cache se não expirou
+    if cache['balance'] is not None and (current_time - cache['timestamp']) < CACHE_EXPIRY:
+        return {'balance': cache['balance'], 'status': cache['status']}
+    
+    try:
+        # Consultar API da Anthropic
+        headers = {
+            'x-api-key': ANTHROPIC_API_KEY,
+            'Content-Type': 'application/json'
+        }
+        # A API da Anthropic não tem um endpoint específico para saldo, então usamos o endpoint de uso
+        response = requests.get('https://api.anthropic.com/v1/account/usage', headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Extrair o saldo ou o crédito disponível da resposta
+            balance = data.get('available_credit', 0)
+            formatted_balance = f"${balance:.2f}"
+            status = 'Atualizado'
+            
+            # Atualizar cache
+            api_balance_cache['anthropic'] = {
+                'balance': formatted_balance,
+                'timestamp': current_time,
+                'status': status
+            }
+            
+            return {'balance': formatted_balance, 'status': status}
+        else:
+            status = f'Erro: {response.status_code}'
+            api_balance_cache['anthropic']['status'] = status
+            return {'balance': None, 'status': status}
+            
+    except Exception as e:
+        status = f'Erro: {str(e)}'
+        api_balance_cache['anthropic']['status'] = status
+        return {'balance': None, 'status': status}
+
+@app.route('/api/balance/openrouter')
+def api_openrouter_balance():
+    """API para obter o saldo da OpenRouter"""
+    balance_info = get_openrouter_balance()
+    return jsonify(balance_info)
+
+@app.route('/api/balance/anthropic')
+def api_anthropic_balance():
+    """API para obter o saldo da Anthropic"""
+    balance_info = get_anthropic_balance()
+    return jsonify(balance_info)
+
+@app.route('/api/balance')
+def api_all_balances():
+    """API para obter todos os saldos"""
+    openrouter = get_openrouter_balance()
+    anthropic = get_anthropic_balance()
+    
+    return jsonify({
+        'openrouter': openrouter,
+        'anthropic': anthropic,
+        'timestamp': int(time.time())
+    })
 
 if __name__ == '__main__':
     # Porta fixa para desenvolvimento (4001) ou produção (4000)

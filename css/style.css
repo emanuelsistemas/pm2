@@ -83,26 +83,6 @@ body {
   border-color: var(--color-primary-hover);
 }
 
-/* Cabeçalho do Dashboard */
-.dashboard-header {
-  padding: 1.5rem;
-  background-color: var(--bg-card);
-  border-radius: var(--border-radius);
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px var(--shadow-color);
-}
-
-.dashboard-header h1 {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-bold);
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.dashboard-header p {
-  color: var(--color-text-muted);
-  margin-bottom: 0;
-}
 
 /* Cards de Estatísticas */
 .stats-card {
@@ -121,6 +101,105 @@ body {
   transform: translateY(-5px);
   box-shadow: 0 6px 12px var(--shadow-color);
   background-color: var(--bg-card-hover);
+}
+/* Cards de Saldo */
+.balance-card {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  transition: all 0.3s ease;
+  height: 100%;
+  border-left: 4px solid var(--color-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px var(--shadow-color);
+  background-color: var(--bg-card-hover);
+}
+
+.balance-card.openrouter {
+  border-color: #3498db;
+}
+
+.balance-card.anthropic {
+  border-color: #9b59b6;
+}
+
+.balance-header {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.8rem;
+}
+
+.balance-header h3 {
+  font-size: 1.3rem;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.balance-card.openrouter .balance-header h3 i {
+  color: #3498db;
+}
+
+.balance-card.anthropic .balance-header h3 i {
+  color: #9b59b6;
+}
+
+.balance-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.balance-amount {
+  font-size: 1.8rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.balance-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.8rem;
+  border-top: 1px dotted var(--color-border);
+}
+
+.balance-status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.balance-card .btn-outline-primary {
+  border-color: var(--color-border);
+  color: var(--color-text);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.balance-card .btn-outline-primary:hover {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.balance-card.openrouter .btn-outline-primary:hover {
+  background-color: #3498db;
+  border-color: #3498db;
+}
+
+.balance-card.anthropic .btn-outline-primary:hover {
+  background-color: #9b59b6;
+  border-color: #9b59b6;
 }
 
 .stats-icon {
