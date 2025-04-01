@@ -33,6 +33,18 @@ def get_pm2_processes():
                 'prod': 'N/A'
             }
             
+            # Mapeamento de portas conhecidas por serviço
+            known_ports = {
+                'supabase-api': {'dev': 8000, 'prod': 8000},
+                'pm2-monitor': {'dev': 4001, 'prod': 4000}
+            }
+            
+            # Verificar se é um serviço com portas conhecidas
+            name = process.get('name', '')
+            if name in known_ports:
+                process['port_info'] = known_ports[name]
+                continue
+            
             # Verificar se temos as variáveis de ambiente
             env = process.get('pm2_env', {})
             env_vars = env.get('env', {})
@@ -48,7 +60,6 @@ def get_pm2_processes():
                     process['port_info']['dev'] = current_port
             
             # Tentar obter o nome base do serviço (removendo -dev ou -prod)
-            name = process.get('name', '')
             base_name = name
             if name.endswith('-dev'):
                 base_name = name[:-4]
@@ -67,6 +78,27 @@ def get_pm2_processes():
                         process['port_info']['prod'] = other_port
                     elif other_port:
                         process['port_info']['dev'] = other_port
+                        
+            # Verificar se há um arquivo de script para esse processo que possa conter informações sobre a porta
+            if name == 'supabase-api' and (process['port_info']['dev'] == 'N/A' or process['port_info']['prod'] == 'N/A'):
+                try:
+                    # Tentar extrair porta do script
+                    pm_exec_path = env.get('pm_exec_path', '')
+                    cwd = env.get('pm_cwd', '')
+                    if cwd and os.path.isdir(cwd):
+                        api_file = os.path.join(cwd, 'api.py')
+                        if os.path.isfile(api_file):
+                            with open(api_file, 'r') as f:
+                                content = f.read()
+                                import re
+                                port_match = re.search(r'port=(\d+)', content)
+                                if port_match:
+                                    port = int(port_match.group(1))
+                                    process['port_info']['dev'] = port
+                                    process['port_info']['prod'] = port
+                except Exception as script_error:
+                    print(f"Erro ao analisar script: {str(script_error)}")
+                    pass
         
         return processes
     except Exception as e:
