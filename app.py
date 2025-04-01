@@ -24,6 +24,50 @@ def get_pm2_processes():
         
         # Processar a saída JSON do PM2
         processes = json.loads(result.stdout)
+        
+        # Extrair informações de porta de cada processo
+        for process in processes:
+            # Inicializar portas como desconhecidas
+            process['port_info'] = {
+                'dev': 'N/A',
+                'prod': 'N/A'
+            }
+            
+            # Verificar se temos as variáveis de ambiente
+            env = process.get('pm2_env', {})
+            env_vars = env.get('env', {})
+            
+            # Verificar porta na configuração atual
+            current_port = env_vars.get('PORT')
+            current_env = env_vars.get('NODE_ENV', '').lower()
+            
+            if current_port:
+                if current_env == 'production':
+                    process['port_info']['prod'] = current_port
+                else:
+                    process['port_info']['dev'] = current_port
+            
+            # Tentar obter o nome base do serviço (removendo -dev ou -prod)
+            name = process.get('name', '')
+            base_name = name
+            if name.endswith('-dev'):
+                base_name = name[:-4]
+            elif name.endswith('-prod'):
+                base_name = name[:-5]
+                
+            # Buscar outros processos com o mesmo nome base para obter a outra porta
+            for other in processes:
+                other_name = other.get('name', '')
+                other_env = other.get('pm2_env', {}).get('env', {}).get('NODE_ENV', '').lower()
+                other_port = other.get('pm2_env', {}).get('env', {}).get('PORT')
+                
+                # Se é o mesmo processo base mas ambiente diferente
+                if other_name != name and (other_name.startswith(base_name) or base_name.startswith(other_name.split('-')[0])):
+                    if other_env == 'production' and other_port:
+                        process['port_info']['prod'] = other_port
+                    elif other_port:
+                        process['port_info']['dev'] = other_port
+        
         return processes
     except Exception as e:
         return {"error": f"Erro: {str(e)}"}

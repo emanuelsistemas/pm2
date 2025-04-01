@@ -249,6 +249,31 @@ body {
   font-weight: var(--font-weight-bold);
 }
 
+/* Estilo para informações de porta */
+.process-card .process-details .port-info {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px dotted var(--color-border);
+}
+
+.process-card .process-details .port-info .detail-label {
+  color: var(--color-info);
+  font-weight: var(--font-weight-bold);
+}
+
+.port-link {
+  color: var(--color-primary);
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.port-link:hover {
+  color: var(--color-primary-hover);
+  opacity: 1;
+  transform: scale(1.2);
+}
+
 .badge-online {
   background-color: var(--color-success);
   color: white;

@@ -199,6 +199,10 @@ function createProcessCard(process) {
     const restart = process.pm2_env?.restart_time || 0;
     const mode = process.pm2_env?.exec_mode || 'N/A';
     
+    // Obter informações de porta (adicionadas pelo backend)
+    const portDev = process.port_info?.dev || 'N/A';
+    const portProd = process.port_info?.prod || 'N/A';
+    
     // Criar elemento
     const cardDiv = document.createElement('div');
     cardDiv.className = 'col-lg-4 col-md-6 mb-4';
@@ -231,6 +235,14 @@ function createProcessCard(process) {
                 <div class="detail-row">
                     <span class="detail-label">Modo:</span>
                     <span class="detail-value">${mode}</span>
+                </div>
+                <div class="detail-row port-info">
+                    <span class="detail-label">Porta (Dev):</span>
+                    <span class="detail-value">${formatPort(portDev)}</span>
+                </div>
+                <div class="detail-row port-info">
+                    <span class="detail-label">Porta (Prod):</span>
+                    <span class="detail-value">${formatPort(portProd)}</span>
                 </div>
             </div>
         </div>
@@ -354,6 +366,19 @@ function getStatusText(status) {
         default:
             return status;
     }
+}
+
+/**
+ * Formata a exibição da porta
+ */
+function formatPort(port) {
+    if (!port || port === 'N/A') return 'N/A';
+    
+    // Adiciona um ícone de link para acesso rápido
+    const url = `http://${window.location.hostname}:${port}`;
+    return `${port} <a href="${url}" target="_blank" title="Abrir serviço na porta ${port}" class="port-link">
+                <i class="fas fa-external-link-alt"></i>
+            </a>`;
 }
 
 // Inicializar quando o DOM estiver pronto
