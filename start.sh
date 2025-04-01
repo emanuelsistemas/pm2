@@ -34,20 +34,15 @@ source venv/bin/activate
 
 # Instalar dependências
 echo "📦 Instalando dependências..."
-pip install -r requirements.txt
+pip install -r requirements.txt --break-system-packages
 
-# Verificar porta
-PORT=5000
-echo "🔍 Verificando se a porta $PORT está disponível..."
-if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; then
-    echo "⚠️ A porta $PORT já está em uso. O aplicativo pode não iniciar corretamente."
-else
-    echo "✅ Porta $PORT disponível."
-fi
+# Configurar ambiente de produção
+export NODE_ENV="production"
+echo "🔧 Ambiente configurado para: produção (porta 4000)"
 
 # Iniciar aplicativo
 echo "🚀 Iniciando PM2 Monitor..."
-python app.py
+python3 app.py
 
 # Desativar ambiente virtual ao sair
 trap 'echo "🔌 Desativando ambiente virtual..."; deactivate' EXIT

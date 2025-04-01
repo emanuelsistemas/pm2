@@ -56,5 +56,10 @@ def api_stats():
     return jsonify(stats)
 
 if __name__ == '__main__':
-    # Iniciar o servidor Flask
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Porta fixa para desenvolvimento (4001) ou produção (4000)
+    env = os.environ.get('NODE_ENV', 'development')
+    port = 4000 if env == 'production' else 4001
+    debug = env != 'production'
+    
+    print(f"Iniciando servidor Flask na porta {port} (ambiente: {env})")
+    app.run(host='0.0.0.0', port=port, debug=debug)
